@@ -1,0 +1,57 @@
+version: "3.7"
+
+services:
+  db:
+    container_name: db
+    image: postgres:13.7
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /data/postgres
+      POSTGRES_DB: root
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/db-init.sql:/docker-entrypoint-initdb.d/docker_postgres_init.sql
+    networks:
+      - db
+    restart: unless-stopped
+
+  server:
+    container_name: server
+    depends_on:
+      - db
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - /server/node_modules
+      - ./server:/server
+    networks:
+      - db
+      - client
+    restart: unless-stopped
+
+  client:
+    container_name: client
+    depends_on:
+      - db
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    volumes:
+      - /client/node_modules
+      - ./client:/client
+    ports:
+      - "8000:3000"
+    networks:
+      - client
+    restart: unless-stopped
+
+networks:
+  client:
+  db:
+    driver: bridge
